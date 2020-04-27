@@ -1,5 +1,6 @@
 
 - 版权声明：本文整理引用沃趣技术公众号performance_schema系列文章：[原文连接](https://mp.weixin.qq.com/s/-c24b7oIZhMbDOikQjS-BA),作者罗小波，在售新书《千金良方——MySQL性能优化金字塔法则》,当当，京东有售！强烈建议购买阅读！
+
 Table of Contents
 =================
 
