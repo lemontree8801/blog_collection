@@ -1,4 +1,4 @@
-
+- [原文链接](https://mp.weixin.qq.com/s/C6129OaeeLaodzLeRhWbvw)
 
 - 克隆插件允许从本地或远程的MySQL Server中克隆数据。克隆的数据是存储在InnoDB中的schema（database）、table（表）、tablespaces（表空间）和data dictionary metadata（数据字典元数据）的物理快照。该物理快照实际上是一个功能完整的数据目录，MySQL克隆插件可以使用该数据目录来配置并恢复一个MySQL Server。
 
