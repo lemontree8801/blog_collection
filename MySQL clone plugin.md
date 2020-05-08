@@ -215,7 +215,7 @@ CLONE INSTANCE FROM 'user'@'host':port IDENTIFIED BY 'password' [DATA DIRECTORY 
 
     - 发送方和接收方需要具有相同的innodb_page_size和innodb_data_file_path系统变量设置。在发送方和接收方上的innodb_data_file_path系统变量设置必须指定相同数量、相同大小的数据文件。可以使用SHOW VARIABLES语句检查各自的变量设置值。例如：SHOW VARIABLES LIKE 'innodb_page_size';SHOW VARIABLES LIKE 'innodb_data_file_path';          
 
-    - 如果克隆加密数据或压缩页数据，则发送方和接收方必须具有相同的文件系统块大小。对于页压缩数据，接收方的文件系统必须支持稀疏文件和打孔（文件系统的概念，可参考链接：http://www.voidcn.com/article/p-cwkauntz-bpz.html），以便在接收方的文件系统上打孔。有关这些特性以及如何识别使用它们的表和表空间的信息，请参见下文中的"4、克隆加密数据"和"5、克隆压缩数据"。要确定文件系统块大小，请参阅操作系统相关的文档。
+    - 如果克隆加密数据或压缩页数据，则发送方和接收方必须具有相同的文件系统块大小。对于页压缩数据，接收方的文件系统必须支持稀疏文件和打孔（文件系统的概念，可参考链接： http://www.voidcn.com/article/p-cwkauntz-bpz.html） ，以便在接收方的文件系统上打孔。有关这些特性以及如何识别使用它们的表和表空间的信息，请参见下文中的"4、克隆加密数据"和"5、克隆压缩数据"。要确定文件系统块大小，请参阅操作系统相关的文档。
 
     - 如果要克隆加密数据，则需要启用安全连接。请参见下文中"为克隆配置加密连接"部分
     - 接收方上的系统变量clone_valid_donor_list的设置必须包含donor MySQL Server的主机地址。因为只能从有效的接收方列表中的主机克隆数据。如果要设置该系统变量，则需要用户具有SYSTEM_VARIABLES_ADMIN权限。在本节后面的远程克隆示例中提供了设置clone_valid_donor_list系统变量的说明。可以使用SHOW VARIABLES语句检查clone_valid_donor_list系统变量的设置。例如：SHOW VARIABLES LIKE 'clone_valid_donor_list'
@@ -391,7 +391,7 @@ admin@localhost : (none):49: > SELECT @@GLOBAL.GTID_EXECUTED;
     - 若要将接收方MySQL Server添加到使用基于GTID的事务作为复制数据源的MySQL复制拓扑中，请按照链接：https://dev.mysql.com/doc/refman/8.0/en/replication-gtids-howto.html 中的说明按需配置实例。为实例添加复制通道，如下面的简短示例所示。CHANGE MASTER TO语句必须定义主库的主机地址（IP）和端口号，并且应该启用MASTER_AUTO_POSITION选项，如下所示: 
 
 
-    - 若要将接收方MySQL Server添加到使用基于二进制日志文件位置复制的MySQL复制拓扑中，请按照链接：https://dev.mysql.com/doc/refman/8.0/en/replication-howto.html中的说明对实例进行必要的配置。使用在克隆操作期间传递给接收方的二进制日志位置（记录在performance_schema.clone_status表中），为实例添加复制通道，如下面的简短示例所示:
+    - 若要将接收方MySQL Server添加到使用基于二进制日志文件位置复制的MySQL复制拓扑中，请按照链接：  https://dev.mysql.com/doc/refman/8.0/en/replication-howto.html 中的说明对实例进行必要的配置。使用在克隆操作期间传递给接收方的二进制日志位置（记录在performance_schema.clone_status表中），为实例添加复制通道，如下面的简短示例所示:
 
 
 ## 7、克隆操作期间创建的目录和文件
