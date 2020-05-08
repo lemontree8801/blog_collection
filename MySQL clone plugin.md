@@ -1,64 +1,77 @@
-Oracle MySQL 推出 clone plugin 也有一段时间了，最近也有不少业界的大拿写了不少关于clone plugin相关的文档，本人不才，对着Oracle MySQL官网手册做了一些翻译、验证、整理。趁着 clone plugin 热赶紧将之前整理的文档分享出来刷个脸。
 
-克隆插件允许从本地或远程的MySQL Server中克隆数据。克隆的数据是存储在InnoDB中的schema（database）、table（表）、tablespaces（表空间）和data dictionary metadata（数据字典元数据）的物理快照。该物理快照实际上是一个功能完整的数据目录，MySQL克隆插件可以使用该数据目录来配置并恢复一个MySQL Server。
 
-本地克隆：指的是将数据从启动克隆操作的MySQL Server克隆到该MySQL Server的主机上的一个指定目录下。下图表示本地克隆操作的示意图
+- 克隆插件允许从本地或远程的MySQL Server中克隆数据。克隆的数据是存储在InnoDB中的schema（database）、table（表）、tablespaces（表空间）和data dictionary metadata（数据字典元数据）的物理快照。该物理快照实际上是一个功能完整的数据目录，MySQL克隆插件可以使用该数据目录来配置并恢复一个MySQL Server。
+
+  - 本地克隆：指的是将数据从启动克隆操作的MySQL Server克隆到该MySQL Server的主机上的一个指定目录下。下图表示本地克隆操作的示意图
                       
-远程克隆：涉及到启动克隆操作的本地MySQL Server（称为"recipient"，即，数据的接收者或接收方）和数据源所在的远程MySQL Server（称为"donor"，即，数据的提供者或发送方），在接收方上启动远程克隆操作时，克隆的数据会通过网络从发送方传输到接收方。默认情况下，远程可能那个操作会删除接收方数据目录中的所有数据，并将其替换为克隆的新数据。如果不希望接收方中的现有数据被删除，你也可以在接收方中执行克隆操作时将克隆数据指定存放在其他目录中。下图表示远程克隆操作的示意图
+  - 远程克隆：涉及到启动克隆操作的本地MySQL Server（称为"recipient"，即，数据的接收者或接收方）和数据源所在的远程MySQL Server（称为"donor"，即，数据的提供者或发送方），在接收方上启动远程克隆操作时，克隆的数据会通过网络从发送方传输到接收方。默认情况下，远程可能那个操作会删除接收方数据目录中的所有数据，并将其替换为克隆的新数据。如果不希望接收方中的现有数据被删除，你也可以在接收方中执行克隆操作时将克隆数据指定存放在其他目录中。下图表示远程克隆操作的示意图
                       
 
-对于克隆的数据本身来说，本地克隆操作与远程克隆操作没有太大区别。
-克隆插件支持在复制拓扑中使用。除了克隆数据外，克隆操作还能够从发送方中提取和传输复制坐标（二进制日志的位置），并将其应用于接收方，也就是说，我们可以使用克隆插件来在组复制中添加新的组成员，也可以在主从复制拓扑中添加新的从库。与通过二进制日志来复制大量事务相比，通过克隆插件要快得多，效率也更高（更多信息详见"6、在复制拓扑中使用克隆"）。组复制成员还可以配置使用克隆插件来作为另一种恢复方法（如果不使用克隆插件，则必须使用基于二进制日志的状态传输进行数据恢复），当组成员和待加入组的Server都配置支持克隆插件时，待加入组的Server可以自行决定选择一个更加高效的方式从种子成员中获取数据。有关更多信息，请参见《MySQL Group Replication for 8.0》."4.3.1 克隆用于分布式恢复"。
+  - 对于克隆的数据本身来说，本地克隆操作与远程克隆操作没有太大区别。
+  - 克隆插件支持在复制拓扑中使用。除了克隆数据外，克隆操作还能够从发送方中提取和传输复制坐标（二进制日志的位置），并将其应用于接收方，也就是说，我们可以使用克隆插件来在组复制中添加新的组成员，也可以在主从复制拓扑中添加新的从库。与通过二进制日志来复制大量事务相比，通过克隆插件要快得多，效率也更高（更多信息详见"6、在复制拓扑中使用克隆"）。组复制成员还可以配置使用克隆插件来作为另一种恢复方法（如果不使用克隆插件，则必须使用基于二进制日志的状态传输进行数据恢复），当组成员和待加入组的Server都配置支持克隆插件时，待加入组的Server可以自行决定选择一个更加高效的方式从种子成员中获取数据。有关更多信息，请参见《MySQL Group Replication for 8.0》."4.3.1 克隆用于分布式恢复"。
 
-克隆插件支持克隆数据加密的和数据页压缩。详情可参考"4、克隆加密数据"和“5、克隆压缩数据"
-要使用克隆功能，必须先安装克隆插件。有关安装的说明，详情可参考"1、安装克隆插件"。有关克隆的命令，详情可参考"2、克隆本地数据"和"3、克隆数据远程”。
-performance_schema中提供了用于监控克隆操作的一些性能事件采集器。详情可参考"9、监控克隆操作"。
-PS：在组复制拓扑中使用远程克隆操作时，为便于与非组复制拓扑做区分，我们这里也可以将"recipient"（即，接收方）称为"joiner"（即，加入方，表示将要加入组复制拓扑的MySQL Server）
+  - 克隆插件支持克隆数据加密的和数据页压缩。详情可参考"4、克隆加密数据"和“5、克隆压缩数据"
+  - 要使用克隆功能，必须先安装克隆插件。有关安装的说明，详情可参考"1、安装克隆插件"。有关克隆的命令，详情可参考"2、克隆本地数据"和"3、克隆数据远程”。
+  - performance_schema中提供了用于监控克隆操作的一些性能事件采集器。详情可参考"9、监控克隆操作"。
+  - PS：在组复制拓扑中使用远程克隆操作时，为便于与非组复制拓扑做区分，我们这里也可以将"recipient"（即，接收方）称为"joiner"（即，加入方，表示将要加入组复制拓扑的MySQL Server）
 
-1、安装克隆插件
-本节介绍如何安装和配置克隆插件。对于远程克隆操作，克隆插件在发送方和接收方的MySQL Server上都必须安装
-有关安装或卸载插件的操作步骤信息，请参见：https://dev.mysql.com/doc/refman/8.0/en/plugin-loading.html
-要使插件可被Server使用，插件库文件必须位于MySQL Server程序目录下的plubin目录中（由系统变量plugin_dir指定的目录）。如果需要修改默认值，则需要在MySQL Server启动时通过系统变量plugin_dir进行指定新的位置
-插件库的基本名是mysql_clone.so。文件名后缀因平台而异（例如，对于Unix和类Unix系统下库文件名后缀为.so，Windows系统下库文件名后缀为.dll)。
-要在MySQL Server启动时加载插件，可以使用--plugin-load-add选项来指定需要加载的库文件名。使用这种插件加载方法，每次MySQL Server启动之前都必须设置好该选项。例如，将其写入my.cnf配置文件中（根据平台的不同调整库文件名后缀为.so或者.dll）：
+## 1、安装克隆插件
+- 本节介绍如何安装和配置克隆插件。对于远程克隆操作，克隆插件在发送方和接收方的MySQL Server上都必须安装
+- 有关安装或卸载插件的操作步骤信息，请参见：https://dev.mysql.com/doc/refman/8.0/en/plugin-loading.html
+- 要使插件可被Server使用，插件库文件必须位于MySQL Server程序目录下的plubin目录中（由系统变量plugin_dir指定的目录）。如果需要修改默认值，则需要在MySQL Server启动时通过系统变量plugin_dir进行指定新的位置
+- 插件库的基本名是mysql_clone.so。文件名后缀因平台而异（例如，对于Unix和类Unix系统下库文件名后缀为.so，Windows系统下库文件名后缀为.dll)。
+- 要在MySQL Server启动时加载插件，可以使用--plugin-load-add选项来指定需要加载的库文件名。使用这种插件加载方法，每次MySQL Server启动之前都必须设置好该选项。例如，将其写入my.cnf配置文件中（根据平台的不同调整库文件名后缀为.so或者.dll）：
+```
 [mysqld]
 plugin-load-add=mysql_clone.so
+```
 
-编辑好my.cnf之后，重新启动MySQL Server以使新设置生效。
-请注意：在从旧版本升级到新版本过程中的重启操作，不能使用--plugin-load-add选项来加载克隆插件。例如，在将MySQL 5.7升级到MySQL 8.0的过程中，仅仅替换完成二进制程序文件之后，但还未完成其他升级步骤之前，尝试使用plugin-load-add=mysql_clone.so 重新启动MySQL Server。会导致报错：[ERROR] [MY-013238] [Server] Error installing plugin 'clone': Cannot install during upgrade。解决方案是在尝试使用--plugin-load-add=mysql_clone .so选项启动MySQL Server之前完成所有的升级操作。
+- 编辑好my.cnf之后，重新启动MySQL Server以使新设置生效。
+  - 请注意：在从旧版本升级到新版本过程中的重启操作，不能使用--plugin-load-add选项来加载克隆插件。例如，在将MySQL 5.7升级到MySQL 8.0的过程中，仅仅替换完成二进制程序文件之后，但还未完成其他升级步骤之前，尝试使用plugin-load-add=mysql_clone.so 重新启动MySQL Server。会导致报错：[ERROR] [MY-013238] [Server] Error installing plugin 'clone': Cannot install during upgrade。解决方案是在尝试使用--plugin-load-add=mysql_clone .so选项启动MySQL Server之前完成所有的升级操作。
 
-或者，后续在需要时动态加载插件，可以使用以下语句（根据需要调整.so后缀）:
+- 或者，后续在需要时动态加载插件，可以使用以下语句（根据需要调整.so后缀）:
+```
 mysql> INSTALL PLUGIN clone SONAME 'mysql_clone.so';
+```
 
-INSTALL PLUGIN语句可以加载插件，并将其注册到mysql系统库下的mysql.plugins表中，这样在后续重启MySQL Server时不需要重复使用--plugin-load-add选项来加载插件库。
+- INSTALL PLUGIN语句可以加载插件，并将其注册到mysql系统库下的mysql.plugins表中，这样在后续重启MySQL Server时不需要重复使用--plugin-load-add选项来加载插件库。
 
-要验证插件是否安装成功，可以查看INFORMATION_SCHEMA.plugins表或者使用SHOW PLUGINS语句查看。例如:
+- 要验证插件是否安装成功，可以查看INFORMATION_SCHEMA.plugins表或者使用SHOW PLUGINS语句查看。例如:
+```
 mysql> SELECT PLUGIN_NAME, PLUGIN_STATUS FROM INFORMATION_SCHEMA.PLUGINS WHERE PLUGIN_NAME = 'clone';
 +------------------------+---------------+
 | PLUGIN_NAME | PLUGIN_STATUS |
 +------------------------+---------------+
 | clone | ACTIVE |
 +------------------------+---------------+
+```
 
-如果插件初始化失败，请检查MySQL错误日志以获取克隆或插件相关的诊断消息。
+- 如果插件初始化失败，请检查MySQL错误日志以获取克隆或插件相关的诊断消息。
 
-如果插件之前已经通过INSTALL PLUGIIN语句或者--plugin-load-add选项成功注册过了，则可以在MySQL Server启动时使用--clone选项来控制克隆插件的激活状态。例如，要在启动时加载插件并防止它在运行时被删除，可以使用以下选项:
+- 如果插件之前已经通过INSTALL PLUGIIN语句或者--plugin-load-add选项成功注册过了，则可以在MySQL Server启动时使用--clone选项来控制克隆插件的激活状态。例如，要在启动时加载插件并防止它在运行时被删除，可以使用以下选项:
+```
 [mysqld]
 plugin-load-add=mysql_clone.so
 clone=FORCE_PLUS_PERMANENT
+```
 
-如果想要阻止MySQL Server在没有克隆插件的情况下运行，那么在插件初始化失败时，可以使用--clone选项设置FORCE或FORCE_PLUS_PERMANENT值强制MySQL Server启动失败
-有关插件激活状态的更多信息，请参见链接：https://dev.mysql.com/doc/refman/8.0/en/plugin-loading.html#server-plugin-activating
+- 如果想要阻止MySQL Server在没有克隆插件的情况下运行，那么在插件初始化失败时，可以使用--clone选项设置FORCE或FORCE_PLUS_PERMANENT值强制MySQL Server启动失败
+- 有关插件激活状态的更多信息，请参见链接：https://dev.mysql.com/doc/refman/8.0/en/plugin-loading.html#server-plugin-activating
 
-2、克隆本地数据
-克隆插件支持用于在本地克隆数据的语法，即，将数据从本地（相同主机）的一个MySQL Server的数据目录克隆到本地MySQL Server所在主机的一个指定目录下，使用克隆插件执行克隆本地数据的操作语法如下：
+## 2、克隆本地数据
+- 克隆插件支持用于在本地克隆数据的语法，即，将数据从本地（相同主机）的一个MySQL Server的数据目录克隆到本地MySQL Server所在主机的一个指定目录下，使用克隆插件执行克隆本地数据的操作语法如下：
+```
 mysql> CLONE LOCAL DATA DIRECTORY [=] 'clone_dir';
+```
 
-要正确使用CLONE语法，必须先安装克隆插件。有关安装说明，请参见"1、安装克隆插件"。执行CLONE LOCAL DATA DIRECTORY语句需要用户具有BACKUP_ADMIN权限，因此需要先授予操作用户该权限，语句如下：
+- 要正确使用CLONE语法，必须先安装克隆插件。有关安装说明，请参见"1、安装克隆插件"。执行CLONE LOCAL DATA DIRECTORY语句需要用户具有BACKUP_ADMIN权限，因此需要先授予操作用户该权限，语句如下：
+```
 #  其中，clone_user是用于执行克隆操作的MySQL用户。该用户可以是在"*.*"上（全局权限）具有BACKUP_ADMIN权限的任何MySQL用户。
 mysql> GRANT BACKUP_ADMIN ON *.* TO 'clone_user';
+```
 
-克隆本地数据示例：
+- 克隆本地数据示例：
+```
 # 伪语句
 mysql> CLONE LOCAL DATA DIRECTORY = '/path/to/clone_dir';
 
@@ -96,13 +109,15 @@ drwxr-x--- 2 mysql mysql 8.0K Feb 6 15:30 performance_schema
 -rw-r--r-- 1 mysql mysql 1.1K Feb 6 15:27 server-cert.pem
 -rw------- 1 mysql mysql 1.7K Feb 6 15:27 server-key.pem
 drwxr-x--- 2 mysql mysql 28 Feb 6 15:27 sys
+```
 
-在上述操作语句中，"/path/to/clone_dir"是将数据克隆到本地目录的绝对路径。该路径中，"clone_dir"目录不能事先存在（事先存在会报错），但路径前缀"/path/to/"必须事先存在。另外，MySQL Server必须具有在文件系统中创建目录所需的写权限。
-注意：本地克隆操作不支持克隆位于数据目录外部的用户创建的表或表空间。尝试克隆此类表或表空间会导致报错：ERROR 1086 (HY000): File '/path/to/tablespace_name.ibd' already exists.。克隆操作时如果指定了一个与数据源表空间相同路径时会导致冲突，因此被禁止。
+- 在上述操作语句中，"/path/to/clone_dir"是将数据克隆到本地目录的绝对路径。该路径中，"clone_dir"目录不能事先存在（事先存在会报错），但路径前缀"/path/to/"必须事先存在。另外，MySQL Server必须具有在文件系统中创建目录所需的写权限。
+  - 注意：本地克隆操作不支持克隆位于数据目录外部的用户创建的表或表空间。尝试克隆此类表或表空间会导致报错：ERROR 1086 (HY000): File '/path/to/tablespace_name.ibd' already exists.。克隆操作时如果指定了一个与数据源表空间相同路径时会导致冲突，因此被禁止。
 
-当执行克隆操作时，所有用户创建的InnoDB表和表空间，InnoDB系统表空间，redo log和undo log表空间都将被克隆到指定目录下（注意：克隆操作只会克隆数据文件，除了系统变量datadir之外，如果系统变量innodb_data_home_dir、innodb_data_file_path、innodb_log_group_home_dir、innodb_undo_directory单独指定了不同于datadir指定的路径，则也会被执行克隆，系统变量socket、pid-file、tmpdir、log-error、slow_query_log_file、log-bin、relay-log指定路径下的文件不会被克隆）
+- 当执行克隆操作时，所有用户创建的InnoDB表和表空间，InnoDB系统表空间，redo log和undo log表空间都将被克隆到指定目录下（注意：克隆操作只会克隆数据文件，除了系统变量datadir之外，如果系统变量innodb_data_home_dir、innodb_data_file_path、innodb_log_group_home_dir、innodb_undo_directory单独指定了不同于datadir指定的路径，则也会被执行克隆，系统变量socket、pid-file、tmpdir、log-error、slow_query_log_file、log-bin、relay-log指定路径下的文件不会被克隆）
 
-如果需要，可以在克隆操作完成后使用克隆的数据目录启动一个新的MySQL Server，例如：
+- 如果需要，可以在克隆操作完成后使用克隆的数据目录启动一个新的MySQL Server，例如：
+```
 # 其中clone_dir是克隆操作完成之后的数据副本目录
 shell> mysqld_safe --datadir=clone_dir
 
@@ -122,9 +137,11 @@ admin@localhost : (none):18: > select @@datadir;
 | /data/mysqldata1/mydata_clone/ |
 +--------------------------------+
 1 row in set (0.00 sec)
+```
 
-有关监控克隆操作状态和进度的信息，请参见"9、监控克隆操作"
-PS：克隆数据副本目录下，有一个"#clone"目录，其下有4个文本文件，2个为空，2个有一些元数据，如下
+- 有关监控克隆操作状态和进度的信息，请参见"9、监控克隆操作"
+- PS：克隆数据副本目录下，有一个"#clone"目录，其下有4个文本文件，2个为空，2个有一些元数据，如下
+```
 [root@physical-machine ~]# ll /data/mysqldata1/mydata_clone/#clone/
 total 8
 -rw-r----- 1 mysql mysql 0 Feb 6 18:31 #replace_files
@@ -157,65 +174,71 @@ LOCAL INSTANCE
 
 
 0
+```
 
-3、克隆远程数据
-克隆插件支持以下语法来克隆远程数据，即，从远程MySQL Server（数据捐赠者，或称为donor节点）克隆数据并将其传输到执行克隆操作的MySQL Server（数据接收者，或称为recipient节点）
+## 3、克隆远程数据
+- 克隆插件支持以下语法来克隆远程数据，即，从远程MySQL Server（数据捐赠者，或称为donor节点）克隆数据并将其传输到执行克隆操作的MySQL Server（数据接收者，或称为recipient节点）
+```
 CLONE INSTANCE FROM 'user'@'host':port IDENTIFIED BY 'password' [DATA DIRECTORY [=] 'clone_dir'] [REQUIRE [NO] SSL];
+```
 
-以上语法中的一些关键字解释：
-"user"是donor MySQL Server上的用于执行克隆操作的用户，需要具有对所有库所有表的BACKUP_ADMIN权限
-"host"是donor MySQL Server的主机名或IP地址。不支持IPV6地址，但支持IPV6地址别名与IPV4地址
-"port"是donor MySQL Server的端口号。(不支持mysqlx_port指定的X协议端口。也不支持通过MySQL Router连接到donor MySQL Server)
-"password"是"user"的用户密码
-"DATA DIRECTORY [=] 'clone_dir'" 是一个可选子句，用于在recipient节点上为要克隆的数据副本指定一个本地存放目录。如果不希望删除recipient节点上数据目录中的现有数据，请使用此选项指定一个其他路径。但需要指定一个绝对路径，并且该目录不能事先存在、MySQL Server必须具有创建目录所需的写访问权限。如果在执行克隆操作时未使用可选的"DATA DIRECTORY [=] 'clone_dir'" 子句，则克隆操作将删除recipient节点数据目录中的现有数据，并用克隆数据副本来替换它，然后自动重新启动MySQL Server
-"[REQUIRE [NO] SSL]" 用于显式指定在通过网络传输克隆数据时是否使用加密连接。如果使用了该子句但不能满足SSL使用条件，则返回一个错误。如果没有指定SSL子句，则克隆数据时默认会先尝试建立加密连接，但如果SSL连接尝试失败，则退回使用不安全连接。另外，无论是否指定此子句，如果要克隆加密数据，则必须使用安全连接。有关更多信息，请参见下文中"为克隆配置加密连接"部分，原文链接：https://dev.mysql.com/doc/refman/8.0/en/clone-plugin-remote.html#clone-plugin-remote-ssl
+- 以上语法中的一些关键字解释：
+  - "user"是donor MySQL Server上的用于执行克隆操作的用户，需要具有对所有库所有表的BACKUP_ADMIN权限
+  - "host"是donor MySQL Server的主机名或IP地址。不支持IPV6地址，但支持IPV6地址别名与IPV4地址
+  - "port"是donor MySQL Server的端口号。(不支持mysqlx_port指定的X协议端口。也不支持通过MySQL Router连接到donor MySQL Server)
+  - "password"是"user"的用户密码
+  - "DATA DIRECTORY [=] 'clone_dir'" 是一个可选子句，用于在recipient节点上为要克隆的数据副本指定一个本地存放目录。如果不希望删除recipient节点上数据目录中的现有数据，请使用此选项指定一个其他路径。但需要指定一个绝对路径，并且该目录不能事先存在、MySQL Server必须具有创建目录所需的写访问权限。如果在执行克隆操作时未使用可选的"DATA DIRECTORY [=] 'clone_dir'" 子句，则克隆操作将删除recipient节点数据目录中的现有数据，并用克隆数据副本来替换它，然后自动重新启动MySQL Server
+  - "[REQUIRE [NO] SSL]" 用于显式指定在通过网络传输克隆数据时是否使用加密连接。如果使用了该子句但不能满足SSL使用条件，则返回一个错误。如果没有指定SSL子句，则克隆数据时默认会先尝试建立加密连接，但如果SSL连接尝试失败，则退回使用不安全连接。另外，无论是否指定此子句，如果要克隆加密数据，则必须使用安全连接。有关更多信息，请参见下文中"为克隆配置加密连接"部分，原文链接：https://dev.mysql.com/doc/refman/8.0/en/clone-plugin-remote.html#clone-plugin-remote-ssl
 
-注意：
-默认情况下，驻留在发送方（donor节点）MySQL Server的数据目录中用户创建的InnoDB表和表空间，会被克隆到接收方（recipient节点）MySQL Server的数据目录中（接收方中与数据文件存放相关的系统变量指定的路径下）。如果指定了"DATA DIRECTORY [=] 'clone_dir'"子句，则在接收方中会将克隆数据存放到指定的目录下
-如果用户创建的InnoDB表和表空间位于发送方MySQL Server的数据目录之外，它们会被克隆到接收方MySQL Server的相同路径上。如果在接收方MySQL Server的相同路径上存在相同文件（表或表空间文件），则会报错
-默认情况下，InnoDB的系统表空间、redo log和undo log表空间被克隆到与donor节点上的相关系统变量指定的相同位置（分别由系统变量innodb_data_home_dir和innodb_data_file_path、innodb_log_group_home_dir和innodb_undo_directory指定）。因此，如果未指定DATA DIRECTORY [=] 'clone_dir'子句，请确保donor节点和recipient节点中的相关系统变量设了为相同路径，如果指定了DATA DIRECTORY [=] 'clone_dir'子句，那么这些表空间和日志将被克隆到指定的目录下（但如果指定了克隆数据的存放目录，则所有的数据文件都会被存放到该目录下，因此，在使用这些集中存放的克隆数据文件来启动新的MySQL Server之前，你可能需要手动做一些路径调整）
+- 注意：
+  - 默认情况下，驻留在发送方（donor节点）MySQL Server的数据目录中用户创建的InnoDB表和表空间，会被克隆到接收方（recipient节点）MySQL Server的数据目录中（接收方中与数据文件存放相关的系统变量指定的路径下）。如果指定了"DATA DIRECTORY [=] 'clone_dir'"子句，则在接收方中会将克隆数据存放到指定的目录下
+  - 如果用户创建的InnoDB表和表空间位于发送方MySQL Server的数据目录之外，它们会被克隆到接收方MySQL Server的相同路径上。如果在接收方MySQL Server的相同路径上存在相同文件（表或表空间文件），则会报错
+  - 默认情况下，InnoDB的系统表空间、redo log和undo log表空间被克隆到与donor节点上的相关系统变量指定的相同位置（分别由系统变量innodb_data_home_dir和innodb_data_file_path、innodb_log_group_home_dir和innodb_undo_directory指定）。因此，如果未指定DATA DIRECTORY [=] 'clone_dir'子句，请确保donor节点和recipient节点中的相关系统变量设了为相同路径，如果指定了DATA DIRECTORY [=] 'clone_dir'子句，那么这些表空间和日志将被克隆到指定的目录下（但如果指定了克隆数据的存放目录，则所有的数据文件都会被存放到该目录下，因此，在使用这些集中存放的克隆数据文件来启动新的MySQL Server之前，你可能需要手动做一些路径调整）
 
-远程克隆的前提条件
-要执行远程克隆操作，克隆插件必须在发送方和接收方的MySQL Server上都是安装且都处于激活状态。有关安装说明，请参见"1、安装克隆插件"
+- 远程克隆的前提条件
+  - 要执行远程克隆操作，克隆插件必须在发送方和接收方的MySQL Server上都是安装且都处于激活状态。有关安装说明，请参见"1、安装克隆插件"
 
-执行远程克隆操作需要在发送方和接收方上都创建好用于克隆操作的MySQL用户（对于发送方和接收方上各自用户克隆的用户，其用户名和密码可以不相同），且授予足够的权限
-                * 对于发送方，克隆用户需要BACKUP_ADMIN权限来访问和传输发送方的数据，并在克隆操作期间阻塞DDL操作
-                * 对于接收方，克隆用户需要CLONE_ADMIN权限来替换接收方的数据，并在克隆操作期间阻塞DDL操作，并自动重新启动MySQL Server。注意：CLONE_ADMIN权限隐式地包含了BACKUP_ADMIN和SHUTDOWN权限
+  - 执行远程克隆操作需要在发送方和接收方上都创建好用于克隆操作的MySQL用户（对于发送方和接收方上各自用户克隆的用户，其用户名和密码可以不相同），且授予足够的权限
+    - 对于发送方，克隆用户需要BACKUP_ADMIN权限来访问和传输发送方的数据，并在克隆操作期间阻塞DDL操作
+    - 对于接收方，克隆用户需要CLONE_ADMIN权限来替换接收方的数据，并在克隆操作期间阻塞DDL操作，并自动重新启动MySQL Server。注意：CLONE_ADMIN权限隐式地包含了BACKUP_ADMIN和SHUTDOWN权限
 
-当执行远程克隆操作时（执行CLONE INSTANCE语句）会执行一些前提条件检查：
-         * 发送方和接收方必须拥有相同的MySQL Server版本。注意：MySQL 8.0.17及更高版本支持克隆插件，低于MySQL 8.0.17版本不支持，可以使用：SELECT VERSION()语句查看版本号
-         * 发送方和接收方MySQL Server必须运行在相同的操作系统和平台上。例如，如果donor节点运行在一个Linux 64位平台上，那么recipient节点也必须运行在Linux 64位平台上。有关如何确定操作系统平台的信息，请参阅操作系统相关文档。
+  - 当执行远程克隆操作时（执行CLONE INSTANCE语句）会执行一些前提条件检查：
+    - 发送方和接收方必须拥有相同的MySQL Server版本。注意：MySQL 8.0.17及更高版本支持克隆插件，低于MySQL 8.0.17版本不支持，可以使用：SELECT VERSION()语句查看版本号
+    - 发送方和接收方MySQL Server必须运行在相同的操作系统和平台上。例如，如果donor节点运行在一个Linux 64位平台上，那么recipient节点也必须运行在Linux 64位平台上。有关如何确定操作系统平台的信息，请参阅操作系统相关文档。
 
-         * 接收方必须有足够的磁盘空间来存放克隆数据。默认情况下，在接收方中接收发送方的克隆数据之前会先删除接收方的数据，因此只需要按照发送方的数据大小来提供足够的磁盘空间即可。但如果使用了DATA DIRECTORY [=] 'clone_dir'子句将克隆数据存放到指定的目录下，则必须考虑接收方和发送方的数据总大小，以便提供足够存放两者数据大小的磁盘空间。可以通过检查文件系统上的数据目录大小和位于数据目录之外的任何表空间的大小来估计数据的大小。在估计发送方的数据大小时，请记住只有InnoDB数据是克隆的。如果在其他存储引擎中存储了数据，在估算克隆所需的磁盘空间时请注意排除这些数据文件的大小
+    - 接收方必须有足够的磁盘空间来存放克隆数据。默认情况下，在接收方中接收发送方的克隆数据之前会先删除接收方的数据，因此只需要按照发送方的数据大小来提供足够的磁盘空间即可。但如果使用了DATA DIRECTORY [=] 'clone_dir'子句将克隆数据存放到指定的目录下，则必须考虑接收方和发送方的数据总大小，以便提供足够存放两者数据大小的磁盘空间。可以通过检查文件系统上的数据目录大小和位于数据目录之外的任何表空间的大小来估计数据的大小。在估计发送方的数据大小时，请记住只有InnoDB数据是克隆的。如果在其他存储引擎中存储了数据，在估算克隆所需的磁盘空间时请注意排除这些数据文件的大小
 
-         * InnoDB允许在数据目录（datadir系统变量指定的目录）之外创建一些表空间类型。如果发送方MySQL Server有驻留在数据目录之外的表空间，则克隆操作必须能够访问这些表空间。可以通过查询INFORMATION_SCHEMA.FILES表来识别位于数据目录之外的数据表空间有哪些，驻留在数据目录之外的数据表空间文件是一个绝对路径。查询语句：SELECT FILE_NAME FROM INFORMATION_SCHEMA.FILES         
+    - InnoDB允许在数据目录（datadir系统变量指定的目录）之外创建一些表空间类型。如果发送方MySQL Server有驻留在数据目录之外的表空间，则克隆操作必须能够访问这些表空间。可以通过查询INFORMATION_SCHEMA.FILES表来识别位于数据目录之外的数据表空间有哪些，驻留在数据目录之外的数据表空间文件是一个绝对路径。查询语句：SELECT FILE_NAME FROM INFORMATION_SCHEMA.FILES         
 
-         * 在发送方上处于激活状态的任何插件，也必须在接收方上处于活动状态。可以通过执行SHOW plugins语句或查询INFORMATION_SCHEMA.PLUGINS表来识别活跃状态的插件
-         * 发送方和接收方必须具有相同的MySQL Server字符集和排序规则。有关MySQL Server字符集和排序配置的信息，请参阅：https://dev.mysql.com/doc/refman/8.0/en/charset-configuration.html
+    - 在发送方上处于激活状态的任何插件，也必须在接收方上处于活动状态。可以通过执行SHOW plugins语句或查询INFORMATION_SCHEMA.PLUGINS表来识别活跃状态的插件
+    - 发送方和接收方必须具有相同的MySQL Server字符集和排序规则。有关MySQL Server字符集和排序配置的信息，请参阅：https://dev.mysql.com/doc/refman/8.0/en/charset-configuration.html
 
-         * 发送方和接收方需要具有相同的innodb_page_size和innodb_data_file_path系统变量设置。在发送方和接收方上的innodb_data_file_path系统变量设置必须指定相同数量、相同大小的数据文件。可以使用SHOW VARIABLES语句检查各自的变量设置值。例如：SHOW VARIABLES LIKE 'innodb_page_size';SHOW VARIABLES LIKE 'innodb_data_file_path';          
+    - 发送方和接收方需要具有相同的innodb_page_size和innodb_data_file_path系统变量设置。在发送方和接收方上的innodb_data_file_path系统变量设置必须指定相同数量、相同大小的数据文件。可以使用SHOW VARIABLES语句检查各自的变量设置值。例如：SHOW VARIABLES LIKE 'innodb_page_size';SHOW VARIABLES LIKE 'innodb_data_file_path';          
 
-         * 如果克隆加密数据或压缩页数据，则发送方和接收方必须具有相同的文件系统块大小。对于页压缩数据，接收方的文件系统必须支持稀疏文件和打孔（文件系统的概念，可参考链接：http://www.voidcn.com/article/p-cwkauntz-bpz.html），以便在接收方的文件系统上打孔。有关这些特性以及如何识别使用它们的表和表空间的信息，请参见下文中的"4、克隆加密数据"和"5、克隆压缩数据"。要确定文件系统块大小，请参阅操作系统相关的文档。
+    - 如果克隆加密数据或压缩页数据，则发送方和接收方必须具有相同的文件系统块大小。对于页压缩数据，接收方的文件系统必须支持稀疏文件和打孔（文件系统的概念，可参考链接：http://www.voidcn.com/article/p-cwkauntz-bpz.html），以便在接收方的文件系统上打孔。有关这些特性以及如何识别使用它们的表和表空间的信息，请参见下文中的"4、克隆加密数据"和"5、克隆压缩数据"。要确定文件系统块大小，请参阅操作系统相关的文档。
 
-         * 如果要克隆加密数据，则需要启用安全连接。请参见下文中"为克隆配置加密连接"部分
-         * 接收方上的系统变量clone_valid_donor_list的设置必须包含donor MySQL Server的主机地址。因为只能从有效的接收方列表中的主机克隆数据。如果要设置该系统变量，则需要用户具有SYSTEM_VARIABLES_ADMIN权限。在本节后面的远程克隆示例中提供了设置clone_valid_donor_list系统变量的说明。可以使用SHOW VARIABLES语句检查clone_valid_donor_list系统变量的设置。例如：SHOW VARIABLES LIKE 'clone_valid_donor_list'
+    - 如果要克隆加密数据，则需要启用安全连接。请参见下文中"为克隆配置加密连接"部分
+    - 接收方上的系统变量clone_valid_donor_list的设置必须包含donor MySQL Server的主机地址。因为只能从有效的接收方列表中的主机克隆数据。如果要设置该系统变量，则需要用户具有SYSTEM_VARIABLES_ADMIN权限。在本节后面的远程克隆示例中提供了设置clone_valid_donor_list系统变量的说明。可以使用SHOW VARIABLES语句检查clone_valid_donor_list系统变量的设置。例如：SHOW VARIABLES LIKE 'clone_valid_donor_list'
 
-         * 克隆操作只能串行执行，不能多个克隆操作并行执行，要确定是否有克隆操作正在运行，可以通过查询performance_schema.clone_status表进行确认，详情可参考"9、监控克隆操作"
-         * 克隆插件以1MB大小的数据包和1M大小的元数据的形式传输数据。因此，在发送方和接收方的MySQL Server上，max_allowed_packet变量的最小值要求为2MB。小于2MB的max_allowed_packet变量值会导致报错。可以使用查询语句来检查max_allowed_packet变量的设置：SHOW VARIABLES LIKE 'max_allowed_packet'
+    - 克隆操作只能串行执行，不能多个克隆操作并行执行，要确定是否有克隆操作正在运行，可以通过查询performance_schema.clone_status表进行确认，详情可参考"9、监控克隆操作"
+    - 克隆插件以1MB大小的数据包和1M大小的元数据的形式传输数据。因此，在发送方和接收方的MySQL Server上，max_allowed_packet变量的最小值要求为2MB。小于2MB的max_allowed_packet变量值会导致报错。可以使用查询语句来检查max_allowed_packet变量的设置：SHOW VARIABLES LIKE 'max_allowed_packet'
 
-以下前提条件也适用于远程克隆操作：
-         *  UNDO表空间文件名必须是唯一的。当数据被从发送方克隆到接收方时，无论UNDO表空间在发送方上的什么位置下存放着，都会被克隆到接收方上的innodb_undo_directory系统变量指定的位置，或者被克隆到DATA DIRECTORY [=] 'clone_dir'子句指定的目录下（如果使用该子句的话）。从MySQL 8.0.18开始，如果在克隆操作期间遇到重复的undo表空间文件名，就会报告错误。在MySQL 8.0.18之前，克隆具有相同文件名的undo表空间可能会导致接收方上的undo表空间文件被覆盖。
+  - 以下前提条件也适用于远程克隆操作：
+    - UNDO表空间文件名必须是唯一的。当数据被从发送方克隆到接收方时，无论UNDO表空间在发送方上的什么位置下存放着，都会被克隆到接收方上的innodb_undo_directory系统变量指定的位置，或者被克隆到DATA DIRECTORY [=] 'clone_dir'子句指定的目录下（如果使用该子句的话）。从MySQL 8.0.18开始，如果在克隆操作期间遇到重复的undo表空间文件名，就会报告错误。在MySQL 8.0.18之前，克隆具有相同文件名的undo表空间可能会导致接收方上的undo表空间文件被覆盖。
 
-         * 要查看UNDO表空间文件名以确保它们的名称是唯一的，可以通过查询INFORMATION_SCHEMA.FILES表，例如：SELECT TABLESPACE_NAME, FILE_NAME FROM INFORMATION_SCHEMA.FILES  WHERE FILE_TYPE LIKE 'UNDO LOG'
+    - 要查看UNDO表空间文件名以确保它们的名称是唯一的，可以通过查询INFORMATION_SCHEMA.FILES表，例如：SELECT TABLESPACE_NAME, FILE_NAME FROM INFORMATION_SCHEMA.FILES  WHERE FILE_TYPE LIKE 'UNDO LOG'
 
 
-         * 有关删除和添加undo表空间文件的信息，请参阅：https://dev.mysql.com/doc/refman/8.0/en/innodb-undo-tablespaces.html
-         * 默认情况下，在克隆数据完成之后，将自动重新启动（停止和启动）接收方MySQL Server。要实现自动重启，必须在接收方上有一个监控进程来检测Server关闭。否则，在数据被克隆后、克隆操作停止、并关闭了接收方MySQL Server之后会报错：ERROR 3707 (HY000): Restart server failed (mysqld is not managed by supervisor process)。此错误不表示克隆操作失败。这意味着在克隆数据之后，必须手动启动接收方MySQL Server。手动启动MySQL Server后，可以连接到接收方MySQL Server检查performance_schema下的clone_progress和clone_status表，以验证克隆操作是否成功完成。对于RESTART语句也会执行相同的监控。有关更多信息，请参见：https://dev.mysql.com/doc/refman/8.0/en/restart.html。如果使用DATA DIRECTORY [=] 'clone_dir'子句克隆到指定目录，则不适用此要求，因为在此情况下不会执行自动重新启动MySQL Server（指定克隆目录的情况下，所有数据文件都被拷贝到了该目录下，实际启动MySQL Server时，配置文件中可能将redo log、undo log和数据文件指向了不同的路径）
+    - 有关删除和添加undo表空间文件的信息，请参阅：https://dev.mysql.com/doc/refman/8.0/en/innodb-undo-tablespaces.html
+    - 默认情况下，在克隆数据完成之后，将自动重新启动（停止和启动）接收方MySQL Server。要实现自动重启，必须在接收方上有一个监控进程来检测Server关闭。否则，在数据被克隆后、克隆操作停止、并关闭了接收方MySQL Server之后会报错：ERROR 3707 (HY000): Restart server failed (mysqld is not managed by supervisor process)。此错误不表示克隆操作失败。这意味着在克隆数据之后，必须手动启动接收方MySQL Server。手动启动MySQL Server后，可以连接到接收方MySQL Server检查performance_schema下的clone_progress和clone_status表，以验证克隆操作是否成功完成。对于RESTART语句也会执行相同的监控。有关更多信息，请参见：https://dev.mysql.com/doc/refman/8.0/en/restart.html。如果使用DATA DIRECTORY [=] 'clone_dir'子句克隆到指定目录，则不适用此要求，因为在此情况下不会执行自动重新启动MySQL Server（指定克隆目录的情况下，所有数据文件都被拷贝到了该目录下，实际启动MySQL Server时，配置文件中可能将redo log、undo log和数据文件指向了不同的路径）
 
-         * 克隆插件支持多个系统变量用于控制远程克隆操作。在执行远程克隆操作之前，请检查系统变量并根据需要进行调整以适应你的运行环境。克隆相关的系统变量是在执行克隆操作的MySQL Server上设置的（接收方）。参见"12、克隆插件系统变量"
+     - 克隆插件支持多个系统变量用于控制远程克隆操作。在执行远程克隆操作之前，请检查系统变量并根据需要进行调整以适应你的运行环境。克隆相关的系统变量是在执行克隆操作的MySQL Server上设置的（接收方）。参见"12、克隆插件系统变量"
 
-         克隆远程数据操作示例：默认情况下，远程克隆操作会删除接收方数据目录中的数据，用克隆的数据替换，然后重新启动MySQL Server（但指定了DATA DIRECTORY [=] 'clone_dir'子句时不会执行自动重启），该示例假设已经满足了所有的前提条件呢，详情参见上文
-# 使用管理用户登录到donor MySQL Server中，创建一个克隆用户并赋予BACKUP_ADMIN权限
+    - 克隆远程数据操作示例：默认情况下，远程克隆操作会删除接收方数据目录中的数据，用克隆的数据替换，然后重新启动MySQL Server（但指定了DATA DIRECTORY [=] 'clone_dir'子句时不会执行自动重启），该示例假设已经满足了所有的前提条件呢，详情参见上文
+    
+
+- 使用管理用户登录到donor MySQL Server中，创建一个克隆用户并赋予BACKUP_ADMIN权限
+```
 root@localhost : (none):08: > create user donor_clone_user@'%' identified by 'letsg0';
 Query OK, 0 rows affected (0.02 sec)
 
@@ -227,71 +250,83 @@ Query OK, 0 rows affected (0.01 sec)
 在donor MySQL Server中安装克隆插件:
 root@localhost : (none):10: > INSTALL PLUGIN clone SONAME 'mysql_clone.so';
 Query OK, 0 rows affected (0.01 sec)
+```
 
-使用管理用户登录到接收方MySQL Server，创建一个克隆用户并赋予
-CLONE_ADMIN权限
+- 使用管理用户登录到接收方MySQL Server，创建一个克隆用户并赋予CLONE_ADMIN权限
+```
 admin@localhost : (none):14: > create user recipient_clone_user@'%' identified by 'letsg0';
 Query OK, 0 rows affected (0.03 sec)
 
 
 admin@localhost : (none):14: > grant clone_admin on *.* to recipient_clone_user@'%';
 Query OK, 0 rows affected (0.01 sec)
+```
 
-在接收方MySQL Server中安装克隆插件:
+- 在接收方MySQL Server中安装克隆插件:
+```
 admin@localhost : (none):14: > INSTALL PLUGIN clone SONAME 'mysql_clone.so';
 Query OK, 0 rows affected (0.01 sec)
-将donor MySQL Server的主机地址添加到接收方MySQL Server的clone_valid_donor_list变量中
+```
+
+- 将donor MySQL Server的主机地址添加到接收方MySQL Server的clone_valid_donor_list变量中
+```
 admin@localhost : (none):37: > SET GLOBAL clone_valid_donor_list = '10.10.30.164:3306';
 Query OK, 0 rows affected (0.00 sec)
+```
 
-以在donor MySQL Server中创建的克隆用户，登录到接收方MySQL Server中，执行如下克隆语句
+- 以在donor MySQL Server中创建的克隆用户，登录到接收方MySQL Server中，执行如下克隆语句
+```
 mysql> CLONE INSTANCE FROM 'donor_clone_user'@'10.10.30.164':3306 IDENTIFIED BY 'letsg0' ;
+```
 
-克隆数据完成后，将自动重新启动接收方的MySQL Server。重启之后可以登录到接收方的MySQL Server中查看performance_schema下的克隆状态信息表，可以查看到克隆操作的状态和进度的信息，请参见"9、监控克隆操作"
+- 克隆数据完成后，将自动重新启动接收方的MySQL Server。重启之后可以登录到接收方的MySQL Server中查看performance_schema下的克隆状态信息表，可以查看到克隆操作的状态和进度的信息，请参见"9、监控克隆操作"
 简单查看克隆的进度和状态信息
 
 
-克隆到指定目录
-默认情况下，远程克隆操作会删除接收方数据目录中的数据，并用克隆的数据替换它。通过克隆到指定目录，可以避免接收方数据目录中的现有数据被删除，也不会执行重启MySQL Server的操作。将数据克隆到指定目录的过程与不指定目录的克隆远程数据过程相同，但有一点区别，前者的克隆语句必须包含DATA DIRECTORY [=] 'clone_dir'子句。例如：CLONE INSTANCE FROM 'donor_clone_user'@'10.10.30.164':3306 IDENTIFIED BY 'letsg0' DATA DIRECTORY = '/data/mysqldata1/mydata_clone'; ，其中，DATA DIRECTORY子句需要指定一个绝对路径，且该目录不能事先存在，MySQL Server必须具有创建目录所需的写访问权限
+- 克隆到指定目录
+  - 默认情况下，远程克隆操作会删除接收方数据目录中的数据，并用克隆的数据替换它。通过克隆到指定目录，可以避免接收方数据目录中的现有数据被删除，也不会执行重启MySQL Server的操作。将数据克隆到指定目录的过程与不指定目录的克隆远程数据过程相同，但有一点区别，前者的克隆语句必须包含DATA DIRECTORY [=] 'clone_dir'子句。例如：CLONE INSTANCE FROM 'donor_clone_user'@'10.10.30.164':3306 IDENTIFIED BY 'letsg0' DATA DIRECTORY = '/data/mysqldata1/mydata_clone'; ，其中，DATA DIRECTORY子句需要指定一个绝对路径，且该目录不能事先存在，MySQL Server必须具有创建目录所需的写访问权限
 
 
-克隆到指定目录时，在克隆数据完成之后，不会自动重新启动接收方MySQL Server。如果你想使用指定目录启动MySQL Server，你必须手动执行一些文件的目录调整之后再执行启动，或者直接使用新的my.cnf配置文件，在启动时将--datadir选项指定到克隆数据所在的目录，例如：mysqld_safe --datadir=/path/to/clone_dir
+  - 克隆到指定目录时，在克隆数据完成之后，不会自动重新启动接收方MySQL Server。如果你想使用指定目录启动MySQL Server，你必须手动执行一些文件的目录调整之后再执行启动，或者直接使用新的my.cnf配置文件，在启动时将--datadir选项指定到克隆数据所在的目录，例如：mysqld_safe --datadir=/path/to/clone_dir
 
-指定了DATA DIRECTORY [=] 'clone_dir'子句的克隆状态和进度信息类似如下
+  - 指定了DATA DIRECTORY [=] 'clone_dir'子句的克隆状态和进度信息类似如下
 
 
-为克隆配置加密连接
-可以为远程克隆操作配置加密连接，以保护通过网络克隆的数据安全。在克隆加密数据时，默认情况下需要使用加密连接。详情可参考"4、克隆加密数据"
+- 为克隆配置加密连接
+  - 可以为远程克隆操作配置加密连接，以保护通过网络克隆的数据安全。在克隆加密数据时，默认情况下需要使用加密连接。详情可参考"4、克隆加密数据"
 
-下面的说明描述了如何配置接收方MySQL Server来使用加密连接。
-PS：假设已将donor MySQL Server配置为使用加密连接。如果没有配置，请参考：https://dev.mysql.com/doc/refman/8.0/en/using-encrypted-connections.html、https://dev.mysql.com/doc/refman/8.0/en/creating-ssl-rsa-files-using-mysql.html，中的服务器端配置说明。
+- 下面的说明描述了如何配置接收方MySQL Server来使用加密连接。
+  - PS：假设已将donor MySQL Server配置为使用加密连接。如果没有配置，请参考：https://dev.mysql.com/doc/refman/8.0/en/using-encrypted-connections.html、https://dev.mysql.com/doc/refman/8.0/en/creating-ssl-rsa-files-using-mysql.html，中的服务器端配置说明。
 
-配置接收方MySQL Server使用加密连接，使发送方MySQL Server的客户端证书和密钥文件适配接收方主机。可以使用安全通道将证书文件分发到接收方MySQL Server所在的主机。这些客户端证书和密钥文件包括如下一些（在8.0中，这些证书和秘钥文件默认情况下在datadir下会自动生成，即使被删除，重启MySQL Server时也会自动生成，因此，直接从发送方的MySQL Server的datadir下拷贝客户端证书和客户端秘钥文件到接收方MySQL Server所在的主机即可）：
-ca.pem：自签名证书颁发机构(CA)文件
-client-cert.pem：客户端公钥证书文件
-client-key.pem：客户端私钥文件
+- 配置接收方MySQL Server使用加密连接，使发送方MySQL Server的客户端证书和密钥文件适配接收方主机。可以使用安全通道将证书文件分发到接收方MySQL Server所在的主机。这些客户端证书和密钥文件包括如下一些（在8.0中，这些证书和秘钥文件默认情况下在datadir下会自动生成，即使被删除，重启MySQL Server时也会自动生成，因此，直接从发送方的MySQL Server的datadir下拷贝客户端证书和客户端秘钥文件到接收方MySQL Server所在的主机即可）：
+  - ca.pem：自签名证书颁发机构(CA)文件
+  - client-cert.pem：客户端公钥证书文件
+  - client-key.pem：客户端私钥文件
 
-在接收方MySQL Server上配置以下SSL选项，使用这些选项分别指定从发送方拷贝过来的客户端证书和秘钥文件所在的绝对路径即可
-clone_ssl_ca：指定自签名证书颁发机构(CA)文件的路径
-clone_ssl_cert：指定客户端公钥证书文件的路径
-clone_ssl_key：指定客户端私有密钥文件的路径
+- 在接收方MySQL Server上配置以下SSL选项，使用这些选项分别指定从发送方拷贝过来的客户端证书和秘钥文件所在的绝对路径即可
+  - clone_ssl_ca：指定自签名证书颁发机构(CA)文件的路径
+  - clone_ssl_cert：指定客户端公钥证书文件的路径
+  - clone_ssl_key：指定客户端私有密钥文件的路径
 
-示例
+- 示例
+```
 clone_ssl_ca=/path/to/ca.pem  
 clone_ssl_cert=/path/to/client-cert.pem
 clone_ssl_key=/path/to/client-key.pem
+```
 
-若要求使用加密连接，需要在接收方中执行克隆语句时包含REQUIRE SSL子句，如下：
+- 若要求使用加密连接，需要在接收方中执行克隆语句时包含REQUIRE SSL子句，如下：
+```
 mysql> CLONE INSTANCE FROM 'user'@'example.donor.host.com':3306 IDENTIFIED BY 'password' DATA DIRECTORY = '/path/to/clone_dir' REQUIRE SSL;
+```
+- 如果没有指定REQUIRE SSL子句，克隆插件将默认先尝试建立加密连接，如果加密连接尝试失败，则退回到未加密连接。
+- 请注意：如果要克隆加密的数据，则无论是否指定了REQUIRE SSL子句，默认情况下都必须使用加密连接。如果在试图克隆加密的数据时使用了REQUIRE NO SSL子句来强行跳过使用加密连接，会导致报错
 
-如果没有指定REQUIRE SSL子句，克隆插件将默认先尝试建立加密连接，如果加密连接尝试失败，则退回到未加密连接。
-请注意：如果要克隆加密的数据，则无论是否指定了REQUIRE SSL子句，默认情况下都必须使用加密连接。如果在试图克隆加密的数据时使用了REQUIRE NO SSL子句来强行跳过使用加密连接，会导致报错
+## 4、克隆加密数据
+- 克隆插件支持克隆加密数据。适用下列规定:
+  - 在克隆远程数据时，为了确保在网络上安全传输未加密的表空间密钥（表空间密钥指的是用于数据加密的密钥），需要一个安全连接，表空间密钥在发送方传输之前解密，然后，在接收方中使用接收方的主密钥重新加密。如果在CLONE INSTANCE语句执行时加密连接不可用或使用了REQUIRE NO SSL子句，则会报错。有关为克隆配置加密连接的信息，请参阅"3、克隆远程数据"一节中的"为克隆配置加密连接"部分，原文链接：https://dev.mysql.com/doc/refman/8.0/en/clone-plugin-remote.html#clone-plugin-remote-ssl
 
-4、克隆加密数据
-克隆插件支持克隆加密数据。适用下列规定:
-在克隆远程数据时，为了确保在网络上安全传输未加密的表空间密钥（表空间密钥指的是用于数据加密的密钥），需要一个安全连接，表空间密钥在发送方传输之前解密，然后，在接收方中使用接收方的主密钥重新加密。如果在CLONE INSTANCE语句执行时加密连接不可用或使用了REQUIRE NO SSL子句，则会报错。有关为克隆配置加密连接的信息，请参阅"3、克隆远程数据"一节中的"为克隆配置加密连接"部分，原文链接：https://dev.mysql.com/doc/refman/8.0/en/clone-plugin-remote.html#clone-plugin-remote-ssl
-
-当将数据克隆到使用本地托管的keyring的本地数据目录时（克隆本地数据），则在使用克隆数据所在的目录启动MySQL Server时必须使用相同的keyring（keyring，即密钥环，密钥环是一个以加密方式存储你的登录信息的本地数据库。各种应用（如浏览器、电子邮件客户端）使用密钥环来安全地存储并管理你的登录凭证、机密、密码、证书或密钥。对于那些需要检索存储在密钥环中的信息的应用程序，需要解锁该密钥环。）
+  - 当将数据克隆到使用本地托管的keyring的本地数据目录时（克隆本地数据），则在使用克隆数据所在的目录启动MySQL Server时必须使用相同的keyring（keyring，即密钥环，密钥环是一个以加密方式存储你的登录信息的本地数据库。各种应用（如浏览器、电子邮件客户端）使用密钥环来安全地存储并管理你的登录凭证、机密、密码、证书或密钥。对于那些需要检索存储在密钥环中的信息的应用程序，需要解锁该密钥环。）
 
 当将数据克隆到使用本地管理的keyring的远程数据目录（接收方目录，即克隆远程数据）时，则在使用克隆数据所在的目录启动MySQL Server时必须使用接收方的keyring
 PS：注意，在进行克隆操作时，无法动态修改innodb_redo_log_encrypt和innodb_undo_log_encrypt变量设置
