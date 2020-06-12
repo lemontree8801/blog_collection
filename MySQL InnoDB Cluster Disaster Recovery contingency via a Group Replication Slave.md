@@ -1,0 +1,1 @@
+- [原文链接](https://mysqlmed.wordpress.com/2020/06/11/mysql-innodb-cluster-disaster-recovery-contingency-via-a-group-replication-slave/)
