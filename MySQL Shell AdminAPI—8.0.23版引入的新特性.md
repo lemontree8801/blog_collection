@@ -29,7 +29,7 @@ MySQL开发团队很高兴地宣布新的MySQL Shell AdminAPI8.0.23版已经发�
 
 组复制中手工停止实例，输出如下：
 
-![https://mysqlserverteam.com/wp-content/uploads/2021/01/instance_error-2.png](https://mysqlserverteam.com/wp-content/uploads/2021/01/instance_error-2.png)
+![avatar](/Users/mengweike/Desktop/instance_error-2.png)
 > 注意：此信息取决于实例是否可访问。
 
 **脑裂**
